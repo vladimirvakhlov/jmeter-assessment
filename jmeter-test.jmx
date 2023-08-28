@@ -22,6 +22,11 @@
             <stringProp name="Argument.metadata">=</stringProp>
             <stringProp name="Argument.value">${__time(yyyy-MM-dd-HH-mm-ss.SSS,)}</stringProp>
           </elementProp>
+          <elementProp name="defined_running_time" elementType="Argument">
+            <stringProp name="Argument.name">defined_running_time</stringProp>
+            <stringProp name="Argument.value">10</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
         </collectionProp>
       </Arguments>
       <hashTree/>
@@ -43,7 +48,7 @@
           <stringProp name="LoopController.loops">1</stringProp>
           <boolProp name="LoopController.continue_forever">false</boolProp>
         </elementProp>
-        <stringProp name="ThreadGroup.num_threads">${__P(threads)}</stringProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
         <stringProp name="ThreadGroup.ramp_time">0</stringProp>
         <boolProp name="ThreadGroup.scheduler">false</boolProp>
         <stringProp name="ThreadGroup.duration"></stringProp>
@@ -61,7 +66,12 @@ qty = Math.round(categories.length/2);
 
 //putting threads and rampup into system properties; needs to be converted to string, otherwise it won&apos;t work.
 props.put(&quot;threads&quot;, String.valueOf(qty));
-props.put(&quot;rampup&quot;, String.valueOf(qty));</stringProp>
+props.put(&quot;rampup&quot;, String.valueOf(qty));
+
+//Calculate thread delay according to set in properties.
+//Per engine, we should delay it only rampup time.
+int duration = Integer.parseInt(vars.get(&quot;defined_running_time&quot;)) + qty;
+props.put(&quot;duration&quot;, String.valueOf(duration));</stringProp>
           <stringProp name="scriptLanguage">java</stringProp>
         </JSR223Sampler>
         <hashTree/>
@@ -74,8 +84,8 @@ props.put(&quot;rampup&quot;, String.valueOf(qty));</stringProp>
         </elementProp>
         <stringProp name="ThreadGroup.ramp_time">${__P(rampup)}</stringProp>
         <boolProp name="ThreadGroup.delayedStart">false</boolProp>
-        <boolProp name="ThreadGroup.scheduler">false</boolProp>
-        <stringProp name="ThreadGroup.duration"></stringProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.duration">${__P(duration)}</stringProp>
         <stringProp name="ThreadGroup.delay"></stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">false</boolProp>
         <stringProp name="TestPlan.comments">${__P(threads,)}</stringProp>
@@ -88,7 +98,7 @@ props.put(&quot;rampup&quot;, String.valueOf(qty));</stringProp>
           <stringProp name="ActionProcessor.duration">0</stringProp>
         </TestAction>
         <hashTree>
-          <PreciseThroughputTimer guiclass="TestBeanGUI" testclass="PreciseThroughputTimer" testname="Precise Throughput Timer" enabled="true">
+          <PreciseThroughputTimer guiclass="TestBeanGUI" testclass="PreciseThroughputTimer" testname="Precise Throughput Timer" enabled="false">
             <doubleProp>
               <name>allowedThroughputSurplus</name>
               <value>1.0</value>
@@ -96,7 +106,7 @@ props.put(&quot;rampup&quot;, String.valueOf(qty));</stringProp>
             </doubleProp>
             <intProp name="batchSize">1</intProp>
             <intProp name="batchThreadDelay">0</intProp>
-            <longProp name="duration">60</longProp>
+            <longProp name="duration">10</longProp>
             <intProp name="exactLimit">10000</intProp>
             <longProp name="randomSeed">0</longProp>
             <doubleProp>
@@ -107,7 +117,7 @@ props.put(&quot;rampup&quot;, String.valueOf(qty));</stringProp>
             <intProp name="throughputPeriod">60</intProp>
           </PreciseThroughputTimer>
           <hashTree/>
-          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="Constant Throughput Timer" enabled="false">
+          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="Constant Throughput Timer" enabled="true">
             <intProp name="calcMode">2</intProp>
             <doubleProp>
               <name>throughput</name>
@@ -152,7 +162,9 @@ int idx = new Random().nextInt(categories.length);
 String category = (categories[idx]);
 
 //putting selected category into variable to use by thread
-vars.put(&quot;CategoryId_generated&quot;, category);</stringProp>
+vars.put(&quot;CategoryId_generated&quot;, category);
+
+</stringProp>
             <stringProp name="scriptLanguage">groovy</stringProp>
           </JSR223PreProcessor>
           <hashTree/>
