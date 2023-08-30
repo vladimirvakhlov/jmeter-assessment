@@ -24,7 +24,18 @@
           </elementProp>
           <elementProp name="defined_running_time" elementType="Argument">
             <stringProp name="Argument.name">defined_running_time</stringProp>
-            <stringProp name="Argument.value">10</stringProp>
+            <stringProp name="Argument.value">60</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="percentile_we_count" elementType="Argument">
+            <stringProp name="Argument.name">percentile_we_count</stringProp>
+            <stringProp name="Argument.value">90</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="percentile_threshold" elementType="Argument">
+            <stringProp name="Argument.name">percentile_threshold</stringProp>
+            <stringProp name="Argument.value">500</stringProp>
+            <stringProp name="Argument.desc">Defined threshold we will compare to in ms</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
         </collectionProp>
@@ -71,7 +82,9 @@ props.put(&quot;rampup&quot;, String.valueOf(qty));
 //Calculate thread delay according to set in properties.
 //Per engine, we should delay it only rampup time.
 int duration = Integer.parseInt(vars.get(&quot;defined_running_time&quot;)) + qty;
-props.put(&quot;duration&quot;, String.valueOf(duration));</stringProp>
+props.put(&quot;duration&quot;, String.valueOf(duration));
+
+props.put(&quot;aggregate_rpt_pct1&quot;, &quot;91&quot;);</stringProp>
           <stringProp name="scriptLanguage">java</stringProp>
         </JSR223Sampler>
         <hashTree/>
@@ -121,13 +134,13 @@ props.put(&quot;duration&quot;, String.valueOf(duration));</stringProp>
             <intProp name="calcMode">2</intProp>
             <doubleProp>
               <name>throughput</name>
-              <value>60.0</value>
+              <value>600.0</value>
               <savedValue>0.0</savedValue>
             </doubleProp>
           </ConstantThroughputTimer>
           <hashTree/>
         </hashTree>
-        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="HTTP Request" enabled="true">
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="HTTPreq" enabled="true">
           <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
           <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
             <collectionProp name="Arguments.arguments"/>
@@ -173,8 +186,6 @@ vars.put(&quot;CategoryId_generated&quot;, category);
             <stringProp name="filename"></stringProp>
             <stringProp name="parameters"></stringProp>
             <stringProp name="script">import groovy.json.JsonSlurper
-import org.apache.commons.io.FileUtils;
-import org.apache.jmeter.services.FileServer;
 
 def response = new JsonSlurper().parseText(prev.getResponseDataAsString());
 
@@ -183,11 +194,6 @@ def promotionIds = response.Promotions.collect { promotion -&gt; promotion.Id };
 def promotionIdsString = promotionIds.join(&apos;,&apos;);
 def promotionPrices = response.Promotions.collect { promotion -&gt; promotion.Price };
 def promotionPricesString = promotionPrices.join(&apos;,&apos;);
-
-// Perform checks:
-// Check is the response is a success, i.e. 2xx or 3xx response code
-// using native call
-//def categoryIdGenerated = vars.get(&quot;CategoryId_generated&quot;) as int
 
 if (prev.isSuccessful() == true) {
 
@@ -216,28 +222,45 @@ if (prev.isSuccessful() == true) {
 			+ResponseTime+&quot; &quot;
 			+&quot;THREAD NUM: &quot;+ctx.getThreadNum());
 
-// Open File
-	String todaysDate = vars.get(&quot;current_date_time&quot;);
-	file = new FileOutputStream(FileServer.getFileServer().getBaseDir()+&quot;/results_&quot;+todaysDate+&quot;.csv&quot;, true); 
-	print = new PrintStream(file); 
-
-// Write data to file 
-	print.println(
-		formattedTime+&quot;,&quot;+
+// Generate the line to write into the file
+	vars.put(&quot;stringline&quot;, formattedTime+&quot;,&quot;+
 		ResponseTime+&quot;,&quot;+
 		response.CategoryId.value+&quot;,&quot;+
 		response.Name.value+&quot;,&quot;+
 		response.Path.value+&quot;,&quot;+
 		promotionIdsString+&quot;,&quot;+
-		promotionPricesString
-				);
+		promotionPricesString)
+}
+</stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+          </JSR223Assertion>
+          <hashTree/>
+        </hashTree>
+        <CriticalSectionController guiclass="CriticalSectionControllerGui" testclass="CriticalSectionController" testname="Critical Section Controller" enabled="true">
+          <stringProp name="CriticalSectionController.lockName">global_lock</stringProp>
+        </CriticalSectionController>
+        <hashTree>
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Processing logging" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">import org.apache.commons.io.FileUtils;
+import org.apache.jmeter.services.FileServer;
+
+// Open File
+	String filename = FileServer.getFileServer().getBaseDir()+&quot;/results_&quot;+vars.get(&quot;current_date_time&quot;)+&quot;.csv&quot;;
+	file = new FileOutputStream(filename, true);
+	props.put(&quot;output_file&quot;, filename);
+	print = new PrintStream(file);
+
+// Write data to file 
+	print.println(vars.get(&quot;stringline&quot;));
 				
 // Close File(s)
 	print.close();
-	file.close();
-}</stringProp>
-            <stringProp name="scriptLanguage">groovy</stringProp>
-          </JSR223Assertion>
+	file.close();</stringProp>
+          </JSR223Sampler>
           <hashTree/>
         </hashTree>
         <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="Debug Sampler" enabled="false">
@@ -246,7 +269,7 @@ if (prev.isSuccessful() == true) {
           <boolProp name="displaySystemProperties">false</boolProp>
         </DebugSampler>
         <hashTree/>
-        <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="true">
+        <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="false">
           <boolProp name="ResultCollector.error_logging">false</boolProp>
           <objProp>
             <name>saveConfig</name>
@@ -283,15 +306,16 @@ if (prev.isSuccessful() == true) {
           <stringProp name="filename"></stringProp>
         </ResultCollector>
         <hashTree/>
-        <ResultSaver guiclass="ResultSaverGui" testclass="ResultSaver" testname="Save Responses to a file" enabled="true">
+        <ResultSaver guiclass="ResultSaverGui" testclass="ResultSaver" testname="Save Responses to a file" enabled="false">
           <stringProp name="FileSaver.filename"></stringProp>
           <boolProp name="FileSaver.errorsonly">false</boolProp>
           <boolProp name="FileSaver.successonly">false</boolProp>
           <boolProp name="FileSaver.skipsuffix">false</boolProp>
           <boolProp name="FileSaver.skipautonumber">false</boolProp>
+          <boolProp name="FileSaver.addTimstamp">true</boolProp>
         </ResultSaver>
         <hashTree/>
-        <ResultCollector guiclass="RespTimeGraphVisualizer" testclass="ResultCollector" testname="Response Time Graph" enabled="true">
+        <ResultCollector guiclass="StatVisualizer" testclass="ResultCollector" testname="Aggregate Report" enabled="true">
           <boolProp name="ResultCollector.error_logging">false</boolProp>
           <objProp>
             <name>saveConfig</name>
@@ -306,7 +330,7 @@ if (prev.isSuccessful() == true) {
               <threadName>true</threadName>
               <dataType>true</dataType>
               <encoding>false</encoding>
-              <assertions>true</assertions>
+              <assertions>false</assertions>
               <subresults>true</subresults>
               <responseData>false</responseData>
               <samplerData>false</samplerData>
@@ -321,88 +345,55 @@ if (prev.isSuccessful() == true) {
               <sentBytes>true</sentBytes>
               <url>true</url>
               <threadCounts>true</threadCounts>
-              <idleTime>true</idleTime>
               <connectTime>true</connectTime>
             </value>
           </objProp>
-          <stringProp name="filename"></stringProp>
-          <stringProp name="RespTimeGraph.interval">1000</stringProp>
-          <boolProp name="ResultCollector.success_only_logging">true</boolProp>
+          <stringProp name="filename">C:\Users\vakhlovv\jmeter-assessment\results.csv</stringProp>
         </ResultCollector>
         <hashTree/>
-        <ResultCollector guiclass="GraphVisualizer" testclass="ResultCollector" testname="Graph Results" enabled="true">
-          <boolProp name="ResultCollector.error_logging">false</boolProp>
-          <objProp>
-            <name>saveConfig</name>
-            <value class="SampleSaveConfiguration">
-              <time>true</time>
-              <latency>true</latency>
-              <timestamp>true</timestamp>
-              <success>true</success>
-              <label>true</label>
-              <code>true</code>
-              <message>true</message>
-              <threadName>true</threadName>
-              <dataType>true</dataType>
-              <encoding>false</encoding>
-              <assertions>true</assertions>
-              <subresults>true</subresults>
-              <responseData>false</responseData>
-              <samplerData>false</samplerData>
-              <xml>false</xml>
-              <fieldNames>true</fieldNames>
-              <responseHeaders>false</responseHeaders>
-              <requestHeaders>false</requestHeaders>
-              <responseDataOnError>false</responseDataOnError>
-              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
-              <assertionsResultsToSave>0</assertionsResultsToSave>
-              <bytes>true</bytes>
-              <sentBytes>true</sentBytes>
-              <url>true</url>
-              <threadCounts>true</threadCounts>
-              <idleTime>true</idleTime>
-              <connectTime>true</connectTime>
-            </value>
-          </objProp>
+      </hashTree>
+      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="tearDown Thread Group" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </PostThreadGroup>
+      <hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="JSR223 Sampler" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
-        </ResultCollector>
-        <hashTree/>
-        <ResultCollector guiclass="StatGraphVisualizer" testclass="ResultCollector" testname="Aggregate Graph" enabled="true">
-          <boolProp name="ResultCollector.error_logging">false</boolProp>
-          <objProp>
-            <name>saveConfig</name>
-            <value class="SampleSaveConfiguration">
-              <time>true</time>
-              <latency>true</latency>
-              <timestamp>true</timestamp>
-              <success>true</success>
-              <label>true</label>
-              <code>true</code>
-              <message>true</message>
-              <threadName>true</threadName>
-              <dataType>true</dataType>
-              <encoding>false</encoding>
-              <assertions>true</assertions>
-              <subresults>true</subresults>
-              <responseData>false</responseData>
-              <samplerData>false</samplerData>
-              <xml>false</xml>
-              <fieldNames>true</fieldNames>
-              <responseHeaders>false</responseHeaders>
-              <requestHeaders>false</requestHeaders>
-              <responseDataOnError>false</responseDataOnError>
-              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
-              <assertionsResultsToSave>0</assertionsResultsToSave>
-              <bytes>true</bytes>
-              <sentBytes>true</sentBytes>
-              <url>true</url>
-              <threadCounts>true</threadCounts>
-              <idleTime>true</idleTime>
-              <connectTime>true</connectTime>
-            </value>
-          </objProp>
-          <stringProp name="filename"></stringProp>
-        </ResultCollector>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">//reading the output file and parsing it. 
+//Column with values in it is being gathered into an array
+def lines = new File(props.get(&quot;output_file&quot;)).readLines()
+def elapsed = []
+lines.each { line -&gt;
+    elapsed.add(line.split(&apos;,&apos;)[1] as long)
+}
+
+elapsed = elapsed.sort()
+def index = Math.round((vars.get(&quot;percentile_we_count&quot;) as int) / 100.0 * elapsed.size()) as int
+
+log.info(vars.get(&quot;percentile_we_count&quot;)+&quot;th percentile: &quot; + elapsed.get(index - 1))
+
+if (elapsed.get(index - 1) &lt;= (vars.get(&quot;percentile_threshold&quot;) as int)) {
+	log.info(&quot;we are passing the threshold&quot;)
+	} else {
+	log.info(&quot;we are failing the threshold&quot;)	
+	}
+
+//elapsed.each { value -&gt;
+//    log.info(&quot;Elapsed Value: $value&quot;)
+//}</stringProp>
+        </JSR223Sampler>
         <hashTree/>
       </hashTree>
     </hashTree>
