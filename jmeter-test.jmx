@@ -21,7 +21,7 @@
           </elementProp>
           <elementProp name="defined_running_time" elementType="Argument">
             <stringProp name="Argument.name">defined_running_time</stringProp>
-            <stringProp name="Argument.value">$(__P(running_time)</stringProp>
+            <stringProp name="Argument.value">15</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="percentile_we_count" elementType="Argument">
@@ -93,7 +93,7 @@ props.put(&quot;total_running_time&quot;, String.valueOf(duration));</stringProp
         <stringProp name="ThreadGroup.ramp_time">${__P(rampup,5)}</stringProp>
         <boolProp name="ThreadGroup.delayedStart">false</boolProp>
         <boolProp name="ThreadGroup.scheduler">true</boolProp>
-        <stringProp name="ThreadGroup.duration">${__P(total_running_time,60)}</stringProp>
+        <stringProp name="ThreadGroup.duration">600</stringProp>
         <stringProp name="ThreadGroup.delay"></stringProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">false</boolProp>
         <stringProp name="TestPlan.comments">${__P(threads,)}</stringProp>
@@ -250,6 +250,12 @@ if (prev.isSuccessful() == true) {
             <stringProp name="script">import org.apache.commons.io.FileUtils;
 import org.apache.jmeter.services.FileServer;
 
+//This is added for mongo
+import com.mongodb.MongoClient;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.MongoCollection;
+import org.bson.Document;
+
 // Open File
 	String filename = FileServer.getFileServer().getBaseDir()+&quot;/results_&quot;+vars.get(&quot;current_date_time&quot;)+&quot;.csv&quot;;
 	file = new FileOutputStream(filename, true);
@@ -261,7 +267,27 @@ import org.apache.jmeter.services.FileServer;
 				
 // Close File(s)
 	print.close();
-	file.close();</stringProp>
+	file.close();
+
+// Define MongoDB connection parameters
+def host = &quot;localhost&quot;;
+def port = 27017;
+def databaseName = &quot;logs_jmeter&quot;;
+def collectionName = &quot;test_collection&quot;;
+
+// Connect to MongoDB
+def mongoClient = new MongoClient(host, port);
+def database = mongoClient.getDatabase(databaseName);
+def collection = database.getCollection(collectionName);
+
+// Create a document to insert
+def document = new Document(&quot;body&quot;, vars.get(&quot;stringline&quot;));
+
+// Insert the document into the collection
+collection.insertOne(document);
+
+// Close the MongoDB connection
+mongoClient.close();</stringProp>
           </JSR223Sampler>
           <hashTree/>
         </hashTree>
