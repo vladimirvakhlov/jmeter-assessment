@@ -83,6 +83,53 @@ props.put(&quot;total_running_time&quot;, String.valueOf(duration));</stringProp
           <stringProp name="scriptLanguage">groovy</stringProp>
         </JSR223Sampler>
         <hashTree/>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="mongo init" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">//check the collection to which we will upload the file
+import com.mongodb.MongoClient;
+import com.mongodb.client.MongoDatabase;
+import org.bson.Document;
+
+// Define MongoDB connection parameters
+def host = props.get(&quot;mongodb.address&quot;);
+def port = Integer.parseInt(props.get(&quot;mongodb.port&quot;));
+def dbName = props.get(&quot;mongodb.dbname&quot;);
+def collectionName = props.get(&quot;mongodb.collection&quot;);
+
+if (host == &apos;&apos; || port == &apos;&apos; || dbName == &apos;&apos; || collectionName == &apos;&apos;) {
+	        log.error(&quot;Mongo properties are not set, omitting&quot;)
+    } else {
+    		//set that mongo is fine
+    		//it&apos;s better to check that after successful connection, for sure.
+    		props.put(&quot;mongo_exists&quot;, &quot;ok&quot;);
+    		// Connect to MongoDB
+		def mongoClient = new MongoClient(host, port);
+		def database = mongoClient.getDatabase(dbName);
+
+		// Check if the collection exists
+		def collectionExists = database.listCollectionNames().into([]).contains(collectionName);
+
+		if (!collectionExists) {
+    		// If the collection doesn&apos;t exist, create it
+    		database.createCollection(collectionName);
+
+    		// Log a message to indicate that the collection was created
+    		log.info(&quot;Collection &apos;$collectionName&apos; created.&quot;);
+		} else {
+    		// Log a message to indicate that the collection already exists
+    		log.info(&quot;Collection &apos;$collectionName&apos; already exists.&quot;);
+		}
+
+		// Close the MongoDB client
+		mongoClient.close();
+    }
+
+</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Main test" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
@@ -223,6 +270,7 @@ if (prev.isSuccessful() == true) {
 			+formattedTime+&quot; &quot;
 			+ResponseTime+&quot; &quot;
 			+&quot;THREAD NUM: &quot;+ctx.getThreadNum());
+	log.info(&quot;MONGO_EXISTS VALUE IS &quot;+props.get(&quot;mongo_exists&quot;));
 
 // Generate the line to write into the file
 	vars.put(&quot;stringline&quot;, formattedTime+&quot;,&quot;+
@@ -250,12 +298,6 @@ if (prev.isSuccessful() == true) {
             <stringProp name="script">import org.apache.commons.io.FileUtils;
 import org.apache.jmeter.services.FileServer;
 
-//This is added for mongo
-import com.mongodb.MongoClient;
-import com.mongodb.client.MongoDatabase;
-import com.mongodb.client.MongoCollection;
-import org.bson.Document;
-
 // Open File
 	String filename = FileServer.getFileServer().getBaseDir()+&quot;/results_&quot;+vars.get(&quot;current_date_time&quot;)+&quot;.csv&quot;;
 	file = new FileOutputStream(filename, true);
@@ -267,17 +309,35 @@ import org.bson.Document;
 				
 // Close File(s)
 	print.close();
-	file.close();
+	file.close();</stringProp>
+          </JSR223Sampler>
+          <hashTree/>
+          <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If Controller" enabled="true">
+            <boolProp name="IfController.evaluateAll">false</boolProp>
+            <boolProp name="IfController.useExpression">true</boolProp>
+            <stringProp name="IfController.condition">${__groovy(props.get(&quot;mongo_exists&quot;) == &quot;ok&quot;)}</stringProp>
+          </IfController>
+          <hashTree>
+            <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="JSR223 Sampler" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">//This is added for mongo
+import com.mongodb.MongoClient;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.MongoCollection;
+import org.bson.Document;
 
 // Define MongoDB connection parameters
-def host = &quot;localhost&quot;;
-def port = 27017;
-def databaseName = &quot;logs_jmeter&quot;;
-def collectionName = &quot;test_collection&quot;;
+def host = props.get(&quot;mongodb.address&quot;);
+def port = Integer.parseInt(props.get(&quot;mongodb.port&quot;));
+def dbName = props.get(&quot;mongodb.dbname&quot;);
+def collectionName = props.get(&quot;mongodb.collection&quot;);
 
 // Connect to MongoDB
 def mongoClient = new MongoClient(host, port);
-def database = mongoClient.getDatabase(databaseName);
+def database = mongoClient.getDatabase(dbName);
 def collection = database.getCollection(collectionName);
 
 // Create a document to insert
@@ -288,8 +348,9 @@ collection.insertOne(document);
 
 // Close the MongoDB connection
 mongoClient.close();</stringProp>
-          </JSR223Sampler>
-          <hashTree/>
+            </JSR223Sampler>
+            <hashTree/>
+          </hashTree>
         </hashTree>
         <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="Debug Sampler" enabled="true">
           <boolProp name="displayJMeterProperties">true</boolProp>
