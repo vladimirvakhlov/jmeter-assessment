@@ -90,14 +90,17 @@ props.put(&quot;total_running_time&quot;, String.valueOf(duration));</stringProp
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">//check the collection to which we will upload the file
 import com.mongodb.MongoClient;
+import com.mongodb.MongoClientURI;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
 
 // Define MongoDB connection parameters
-def host = props.get(&quot;mongodb.address&quot;);
-def port = Integer.parseInt(props.get(&quot;mongodb.port&quot;));
 def dbName = props.get(&quot;mongodb.dbname&quot;);
 def collectionName = props.get(&quot;mongodb.collection&quot;);
+def host = props.get(&quot;mongodb.address&quot;);
+def port = Integer.parseInt(props.get(&quot;mongodb.port&quot;));
+def name = props.get(&quot;mongodb.name&quot;);
+def pass = props.get(&quot;mongodb.password&quot;);
 
 if (host == &apos;&apos; || port == &apos;&apos; || dbName == &apos;&apos; || collectionName == &apos;&apos;) {
 	        log.error(&quot;Mongo properties are not set, omitting&quot;)
@@ -105,8 +108,15 @@ if (host == &apos;&apos; || port == &apos;&apos; || dbName == &apos;&apos; || co
     		//set that mongo is fine
     		//it&apos;s better to check that after successful connection, for sure.
     		props.put(&quot;mongo_exists&quot;, &quot;ok&quot;);
+
+    		String template = &quot;mongodb://%s:%s@%s:%s/?retryWrites=false&amp;tls=false&quot;;
+		String connectionString = String.format(template, name, pass, host, port);
+
+		// Connect to MongoDB
+		MongoClientURI clientURI = new MongoClientURI(connectionString);
+		MongoClient mongoClient = new MongoClient(clientURI);
+		
     		// Connect to MongoDB
-		def mongoClient = new MongoClient(host, port);
 		def database = mongoClient.getDatabase(dbName);
 
 		// Check if the collection exists
@@ -318,36 +328,51 @@ import org.apache.jmeter.services.FileServer;
             <stringProp name="IfController.condition">${__groovy(props.get(&quot;mongo_exists&quot;) == &quot;ok&quot;)}</stringProp>
           </IfController>
           <hashTree>
-            <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="JSR223 Sampler" enabled="true">
+            <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="mongo_writing" enabled="true">
               <stringProp name="scriptLanguage">groovy</stringProp>
               <stringProp name="parameters"></stringProp>
               <stringProp name="filename"></stringProp>
               <stringProp name="cacheKey">true</stringProp>
-              <stringProp name="script">//This is added for mongo
+              <stringProp name="script">log.info(&quot;!!START WRITING TO MONGO!!&quot;);
+//This is added for mongo
 import com.mongodb.MongoClient;
+import com.mongodb.MongoClientURI;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.MongoCollection;
 import org.bson.Document;
 
 // Define MongoDB connection parameters
-def host = props.get(&quot;mongodb.address&quot;);
-def port = Integer.parseInt(props.get(&quot;mongodb.port&quot;));
 def dbName = props.get(&quot;mongodb.dbname&quot;);
 def collectionName = props.get(&quot;mongodb.collection&quot;);
+def host = props.get(&quot;mongodb.address&quot;);
+def port = Integer.parseInt(props.get(&quot;mongodb.port&quot;));
+def name = props.get(&quot;mongodb.name&quot;);
+def pass = props.get(&quot;mongodb.password&quot;);
+
+String template = &quot;mongodb://%s:%s@%s:%s/?retryWrites=false&amp;tls=false&quot;;
+String connectionString = String.format(template, name, pass, host, port);
+
+log.info(&quot;WE WILL CONNECT TO MONGO @ &quot;+ connectionString);
 
 // Connect to MongoDB
-def mongoClient = new MongoClient(host, port);
-def database = mongoClient.getDatabase(dbName);
-def collection = database.getCollection(collectionName);
+MongoClientURI clientURI = new MongoClientURI(connectionString);
+log.info(&quot;!!ClientURI assigned!!&quot;);
+MongoClient mongoClient = new MongoClient(clientURI);
+log.info(&quot;!!ClientOPENED!!&quot;);
 
+def database = mongoClient.getDatabase(dbName);
+log.info(&quot;!!DATABASE OBTAINED!!&quot;);
+def collection = database.getCollection(collectionName);
+log.info(&quot;!!COLLECTION OBTAINED!!&quot;);
 // Create a document to insert
 def document = new Document(&quot;body&quot;, vars.get(&quot;stringline&quot;));
-
+log.info(&quot;!!START TO INSERT COLLECTION!!&quot;);
 // Insert the document into the collection
 collection.insertOne(document);
-
+log.info(&quot;!!COLLECTION INSERTED!!&quot;);
 // Close the MongoDB connection
-mongoClient.close();</stringProp>
+mongoClient.close();
+log.info(&quot;!!FINISH WRITING TO MONGO!!&quot;);</stringProp>
             </JSR223Sampler>
             <hashTree/>
           </hashTree>

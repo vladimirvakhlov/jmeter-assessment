@@ -1,0 +1,572 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.2">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="Test Plan" enabled="true">
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+        <collectionProp name="Arguments.arguments"/>
+      </elementProp>
+    </TestPlan>
+    <hashTree>
+      <ConfigTestElement guiclass="PropertyControlGui" testclass="ConfigTestElement" testname="Property Display" enabled="true"/>
+      <hashTree/>
+      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="current_date_time" elementType="Argument">
+            <stringProp name="Argument.name">current_date_time</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.value">${__time(yyyy-MM-dd-HH-mm-ss.SSS,)}</stringProp>
+          </elementProp>
+          <elementProp name="defined_running_time" elementType="Argument">
+            <stringProp name="Argument.name">defined_running_time</stringProp>
+            <stringProp name="Argument.value">15</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="percentile_we_count" elementType="Argument">
+            <stringProp name="Argument.name">percentile_we_count</stringProp>
+            <stringProp name="Argument.value">90</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="percentile_threshold" elementType="Argument">
+            <stringProp name="Argument.name">percentile_threshold</stringProp>
+            <stringProp name="Argument.value">500</stringProp>
+            <stringProp name="Argument.desc">Defined threshold we will compare to in ms</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+        </collectionProp>
+      </Arguments>
+      <hashTree/>
+      <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="CSV Data Set Config" enabled="true">
+        <stringProp name="filename">categories.csv</stringProp>
+        <stringProp name="fileEncoding"></stringProp>
+        <stringProp name="variableNames">categories</stringProp>
+        <boolProp name="ignoreFirstLine">false</boolProp>
+        <stringProp name="delimiter">;</stringProp>
+        <boolProp name="quotedData">false</boolProp>
+        <boolProp name="recycle">true</boolProp>
+        <boolProp name="stopThread">false</boolProp>
+        <stringProp name="shareMode">shareMode.all</stringProp>
+      </CSVDataSet>
+      <hashTree/>
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="setup threads" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">0</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">false</boolProp>
+      </SetupThreadGroup>
+      <hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Threads init" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="script">// Calculating quantity of required threads according initial documents
+String[] categories = (vars.get(&quot;categories&quot;)).split(&quot;,&quot;);
+qty = Math.round(categories.length/2);
+
+//putting threads and rampup into system properties; needs to be converted to string, otherwise it won&apos;t work.
+props.put(&quot;threads&quot;, String.valueOf(qty));
+props.put(&quot;rampup&quot;, String.valueOf(qty));
+
+//Calculate thread delay according to set in properties.
+//Per engine, we should delay it only rampup time.
+int duration = Integer.parseInt(props.get(&quot;running_time&quot;)) + qty;
+props.put(&quot;total_running_time&quot;, String.valueOf(duration));</stringProp>
+          <stringProp name="scriptLanguage">groovy</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="mongo init" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">//check the collection to which we will upload the file
+import com.mongodb.MongoClient;
+import com.mongodb.client.MongoDatabase;
+import org.bson.Document;
+
+// Define MongoDB connection parameters
+def host = props.get(&quot;mongodb.address&quot;);
+def port = Integer.parseInt(props.get(&quot;mongodb.port&quot;));
+def dbName = props.get(&quot;mongodb.dbname&quot;);
+def collectionName = props.get(&quot;mongodb.collection&quot;);
+
+if (host == &apos;&apos; || port == &apos;&apos; || dbName == &apos;&apos; || collectionName == &apos;&apos;) {
+	        log.error(&quot;Mongo properties are not set, omitting&quot;)
+    } else {
+    		//set that mongo is fine
+    		//it&apos;s better to check that after successful connection, for sure.
+    		props.put(&quot;mongo_exists&quot;, &quot;ok&quot;);
+    		// Connect to MongoDB
+		def mongoClient = new MongoClient(host, port);
+		def database = mongoClient.getDatabase(dbName);
+
+		// Check if the collection exists
+		def collectionExists = database.listCollectionNames().into([]).contains(collectionName);
+
+		if (!collectionExists) {
+    		// If the collection doesn&apos;t exist, create it
+    		database.createCollection(collectionName);
+
+    		// Log a message to indicate that the collection was created
+    		log.info(&quot;Collection &apos;$collectionName&apos; created.&quot;);
+		} else {
+    		// Log a message to indicate that the collection already exists
+    		log.info(&quot;Collection &apos;$collectionName&apos; already exists.&quot;);
+		}
+
+		// Close the MongoDB client
+		mongoClient.close();
+    }
+
+</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Main test" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <intProp name="LoopController.loops">-1</intProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.ramp_time">${__P(rampup,5)}</stringProp>
+        <boolProp name="ThreadGroup.delayedStart">false</boolProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.duration">600</stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">false</boolProp>
+        <stringProp name="TestPlan.comments">${__P(threads,)}</stringProp>
+        <stringProp name="ThreadGroup.num_threads">${__P(threads,5)}</stringProp>
+      </ThreadGroup>
+      <hashTree>
+        <TestAction guiclass="TestActionGui" testclass="TestAction" testname="Flow Control Action" enabled="true">
+          <intProp name="ActionProcessor.action">1</intProp>
+          <intProp name="ActionProcessor.target">0</intProp>
+          <stringProp name="ActionProcessor.duration">0</stringProp>
+        </TestAction>
+        <hashTree>
+          <PreciseThroughputTimer guiclass="TestBeanGUI" testclass="PreciseThroughputTimer" testname="Precise Throughput Timer" enabled="false">
+            <doubleProp>
+              <name>allowedThroughputSurplus</name>
+              <value>1.0</value>
+              <savedValue>0.0</savedValue>
+            </doubleProp>
+            <intProp name="batchSize">1</intProp>
+            <intProp name="batchThreadDelay">0</intProp>
+            <longProp name="duration">10</longProp>
+            <intProp name="exactLimit">10000</intProp>
+            <longProp name="randomSeed">0</longProp>
+            <doubleProp>
+              <name>throughput</name>
+              <value>60.0</value>
+              <savedValue>0.0</savedValue>
+            </doubleProp>
+            <intProp name="throughputPeriod">60</intProp>
+          </PreciseThroughputTimer>
+          <hashTree/>
+          <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="Constant Throughput Timer" enabled="true">
+            <intProp name="calcMode">2</intProp>
+            <stringProp name="throughput">${__P(target_throughput,10)}</stringProp>
+          </ConstantThroughputTimer>
+          <hashTree/>
+        </hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Main Request" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">${__P(connection_url,api.tmsandbox.co.nz)}</stringProp>
+          <stringProp name="HTTPSampler.protocol">https</stringProp>
+          <stringProp name="HTTPSampler.path">${__P(connection_path_corrected,/v1/Categories/%%category_id%%/Details.json?catalogue=false)}</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <boolProp name="HTTPSampler.BROWSER_COMPATIBLE_MULTIPART">false</boolProp>
+          <boolProp name="HTTPSampler.image_parser">false</boolProp>
+          <boolProp name="HTTPSampler.concurrentDwn">false</boolProp>
+          <stringProp name="HTTPSampler.concurrentPool">6</stringProp>
+          <boolProp name="HTTPSampler.md5">false</boolProp>
+          <intProp name="HTTPSampler.ipSourceType">0</intProp>
+          <stringProp name="HTTPSampler.implementation">HttpClient4</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Presettings" enabled="true">
+            <stringProp name="cacheKey">false</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="script">import java.util.Random;
+
+//Selecting the category randomly
+String[] categories = (vars.get(&quot;categories&quot;)).split(&quot;,&quot;);
+
+int idx = new Random().nextInt(categories.length);
+String category = (categories[idx]);
+
+//putting selected category into variable to use by thread
+vars.put(&quot;CategoryId_generated&quot;, category);
+
+//Obtaining connection path from property, replacing template and putting back into property
+//Solution I don&apos;t like, but JMeter doesn&apos;t allow ref to a variable in a property
+String temp_var = props.get(&quot;connection_path&quot;).replace(&quot;%%category_id%%&quot;, vars.get(&quot;CategoryId_generated&quot;));
+
+props.put(&quot;connection_path_corrected&quot;, temp_var);
+
+</stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+          </JSR223PreProcessor>
+          <hashTree/>
+          <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Validation" enabled="true">
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="script">import groovy.json.JsonSlurper
+
+def response = new JsonSlurper().parseText(prev.getResponseDataAsString());
+
+//gathering promotion ids and prices into single variables
+def promotionIds = response.Promotions.collect { promotion -&gt; promotion.Id };
+def promotionIdsString = promotionIds.join(&apos;,&apos;);
+def promotionPrices = response.Promotions.collect { promotion -&gt; promotion.Price };
+def promotionPricesString = promotionPrices.join(&apos;,&apos;);
+
+if (prev.isSuccessful() == true) {
+
+// If the response is a success, performance additional checks
+	if (response.CanRelist.value == true &amp;&amp; response.CategoryId.value == vars.get(&quot;CategoryId_generated&quot;) as int) {
+		log.info(&quot;Note that CanRelist is TRUE and obtained CategoryId is proper&quot;)
+			} else {
+				log.error(&quot;Something has failed. Note that: CanRelist is &quot;
+				+response.CanRelist.value
+				+&quot; and CategoryID obtained = &quot;+response.CategoryId.value
+				+&quot; and CategoryID generated was &quot;+vars.get(&quot;CategoryId_generated&quot;));
+				log.error(prev.getResponseDataAsString());
+				
+				//Optional: set response as not successful if it doesn&apos;t pass our criteria.
+				//Will be reflected in the reports as fail.
+				prev.setSuccessful(false);
+			}
+
+// Per requirements, not depending on &quot;additional&quot; checks, the results should be put in the file
+// Getting timings
+	def EndTime = prev.getEndTime();
+	def ResponseTime = prev.getTime();
+
+// Converting times into human readable format
+	def dateFormat = new java.text.SimpleDateFormat(&quot;yyyy-MM-dd HH:mm:ss.SSS&quot;)
+	def formattedTime = dateFormat.format(new Date(EndTime))
+
+// Putting timings into standard output
+	log.info(&quot;!!!!!! REQUEST DONE: &quot;
+			+formattedTime+&quot; &quot;
+			+ResponseTime+&quot; &quot;
+			+&quot;THREAD NUM: &quot;+ctx.getThreadNum());
+	log.info(&quot;MONGO_EXISTS VALUE IS &quot;+props.get(&quot;mongo_exists&quot;));
+
+// Generate the line to write into the file
+	vars.put(&quot;stringline&quot;, formattedTime+&quot;,&quot;+
+		ResponseTime+&quot;,&quot;+
+		response.CategoryId.value+&quot;,&quot;+
+		response.Name.value+&quot;,&quot;+
+		response.Path.value+&quot;,&quot;+
+		promotionIdsString+&quot;,&quot;+
+		promotionPricesString)
+}
+</stringProp>
+            <stringProp name="scriptLanguage">groovy</stringProp>
+          </JSR223Assertion>
+          <hashTree/>
+        </hashTree>
+        <CriticalSectionController guiclass="CriticalSectionControllerGui" testclass="CriticalSectionController" testname="Critical Section Controller" enabled="true">
+          <stringProp name="CriticalSectionController.lockName">global_lock</stringProp>
+        </CriticalSectionController>
+        <hashTree>
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Writing output log" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">import org.apache.commons.io.FileUtils;
+import org.apache.jmeter.services.FileServer;
+
+// Open File
+	String filename = FileServer.getFileServer().getBaseDir()+&quot;/results_&quot;+vars.get(&quot;current_date_time&quot;)+&quot;.csv&quot;;
+	file = new FileOutputStream(filename, true);
+	props.put(&quot;output_file&quot;, filename);
+	print = new PrintStream(file);
+
+// Write data to file 
+	print.println(vars.get(&quot;stringline&quot;));
+				
+// Close File(s)
+	print.close();
+	file.close();</stringProp>
+          </JSR223Sampler>
+          <hashTree/>
+          <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If Controller" enabled="true">
+            <boolProp name="IfController.evaluateAll">false</boolProp>
+            <boolProp name="IfController.useExpression">true</boolProp>
+            <stringProp name="IfController.condition">${__groovy(props.get(&quot;mongo_exists&quot;) == &quot;ok&quot;)}</stringProp>
+          </IfController>
+          <hashTree>
+            <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="mongo writing" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="parameters"></stringProp>
+              <stringProp name="filename"></stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">//This is added for mongo
+import com.mongodb.MongoClient;
+import com.mongodb.MongoClientURI;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.MongoCollection;
+import org.bson.Document;
+
+// Define MongoDB connection parameters
+def dbName = props.get(&quot;mongodb.dbname&quot;);
+def collectionName = props.get(&quot;mongodb.collection&quot;);
+def host = props.get(&quot;mongodb.address&quot;);
+def port = Integer.parseInt(props.get(&quot;mongodb.port&quot;));
+def name = props.get(&quot;mongodb.name&quot;);
+def pass = props.get(&quot;mongodb.password&quot;);
+
+String template = &quot;mongodb://%s:%s@%s:%s/?retryWrites=false&amp;tls=false&quot;;
+String connectionString = String.format(template, name, pass, host, port);
+
+log.info(&quot;WE WILL CONNECT TO MONGO @ &quot;+ connectionString);
+
+// Connect to MongoDB
+MongoClientURI clientURI = new MongoClientURI(connectionString);
+MongoClient mongoClient = new MongoClient(clientURI);
+
+def database = mongoClient.getDatabase(dbName);
+def collection = database.getCollection(collectionName);
+
+// Create a document to insert
+def document = new Document(&quot;body&quot;, vars.get(&quot;stringline&quot;));
+
+// Insert the document into the collection
+collection.insertOne(document);
+
+// Close the MongoDB connection
+mongoClient.close();</stringProp>
+            </JSR223Sampler>
+            <hashTree/>
+          </hashTree>
+        </hashTree>
+        <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="Debug Sampler" enabled="true">
+          <boolProp name="displayJMeterProperties">true</boolProp>
+          <boolProp name="displayJMeterVariables">true</boolProp>
+          <boolProp name="displaySystemProperties">false</boolProp>
+        </DebugSampler>
+        <hashTree/>
+        <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="true">
+          <boolProp name="ResultCollector.error_logging">false</boolProp>
+          <objProp>
+            <name>saveConfig</name>
+            <value class="SampleSaveConfiguration">
+              <time>true</time>
+              <latency>true</latency>
+              <timestamp>true</timestamp>
+              <success>true</success>
+              <label>true</label>
+              <code>true</code>
+              <message>true</message>
+              <threadName>true</threadName>
+              <dataType>true</dataType>
+              <encoding>false</encoding>
+              <assertions>true</assertions>
+              <subresults>true</subresults>
+              <responseData>false</responseData>
+              <samplerData>false</samplerData>
+              <xml>false</xml>
+              <fieldNames>true</fieldNames>
+              <responseHeaders>false</responseHeaders>
+              <requestHeaders>false</requestHeaders>
+              <responseDataOnError>false</responseDataOnError>
+              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+              <assertionsResultsToSave>0</assertionsResultsToSave>
+              <bytes>true</bytes>
+              <sentBytes>true</sentBytes>
+              <url>true</url>
+              <threadCounts>true</threadCounts>
+              <idleTime>true</idleTime>
+              <connectTime>true</connectTime>
+            </value>
+          </objProp>
+          <stringProp name="filename"></stringProp>
+        </ResultCollector>
+        <hashTree/>
+        <ResultSaver guiclass="ResultSaverGui" testclass="ResultSaver" testname="Save Responses to a file" enabled="false">
+          <stringProp name="FileSaver.filename"></stringProp>
+          <boolProp name="FileSaver.errorsonly">false</boolProp>
+          <boolProp name="FileSaver.successonly">false</boolProp>
+          <boolProp name="FileSaver.skipsuffix">false</boolProp>
+          <boolProp name="FileSaver.skipautonumber">false</boolProp>
+          <boolProp name="FileSaver.addTimstamp">true</boolProp>
+        </ResultSaver>
+        <hashTree/>
+        <ResultCollector guiclass="StatVisualizer" testclass="ResultCollector" testname="Aggregate Report" enabled="true">
+          <boolProp name="ResultCollector.error_logging">false</boolProp>
+          <objProp>
+            <name>saveConfig</name>
+            <value class="SampleSaveConfiguration">
+              <time>true</time>
+              <latency>true</latency>
+              <timestamp>true</timestamp>
+              <success>true</success>
+              <label>true</label>
+              <code>true</code>
+              <message>true</message>
+              <threadName>true</threadName>
+              <dataType>true</dataType>
+              <encoding>false</encoding>
+              <assertions>false</assertions>
+              <subresults>true</subresults>
+              <responseData>false</responseData>
+              <samplerData>false</samplerData>
+              <xml>false</xml>
+              <fieldNames>true</fieldNames>
+              <responseHeaders>false</responseHeaders>
+              <requestHeaders>false</requestHeaders>
+              <responseDataOnError>false</responseDataOnError>
+              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+              <assertionsResultsToSave>0</assertionsResultsToSave>
+              <bytes>true</bytes>
+              <sentBytes>true</sentBytes>
+              <url>true</url>
+              <threadCounts>true</threadCounts>
+              <connectTime>true</connectTime>
+            </value>
+          </objProp>
+          <stringProp name="filename">C:\Users\vakhlovv\jmeter-assessment\results.csv</stringProp>
+        </ResultCollector>
+        <hashTree/>
+        <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report" enabled="true">
+          <boolProp name="ResultCollector.error_logging">false</boolProp>
+          <objProp>
+            <name>saveConfig</name>
+            <value class="SampleSaveConfiguration">
+              <time>true</time>
+              <latency>true</latency>
+              <timestamp>true</timestamp>
+              <success>true</success>
+              <label>true</label>
+              <code>true</code>
+              <message>true</message>
+              <threadName>true</threadName>
+              <dataType>true</dataType>
+              <encoding>false</encoding>
+              <assertions>true</assertions>
+              <subresults>true</subresults>
+              <responseData>false</responseData>
+              <samplerData>false</samplerData>
+              <xml>false</xml>
+              <fieldNames>true</fieldNames>
+              <responseHeaders>false</responseHeaders>
+              <requestHeaders>false</requestHeaders>
+              <responseDataOnError>false</responseDataOnError>
+              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+              <assertionsResultsToSave>0</assertionsResultsToSave>
+              <bytes>true</bytes>
+              <sentBytes>true</sentBytes>
+              <url>true</url>
+              <threadCounts>true</threadCounts>
+              <idleTime>true</idleTime>
+              <connectTime>true</connectTime>
+            </value>
+          </objProp>
+          <stringProp name="filename"></stringProp>
+        </ResultCollector>
+        <hashTree/>
+      </hashTree>
+      <PostThreadGroup guiclass="PostThreadGroupGui" testclass="PostThreadGroup" testname="tearDown" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </PostThreadGroup>
+      <hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Processing results" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import java.util.List;
+import java.util.ArrayList;
+import java.lang.Math;
+//reading the output file and parsing it. 
+//Column with values in it is being gathered into an array
+def lines = new File(props.get(&quot;output_file&quot;)).readLines()
+def elapsed = []
+lines.each { line -&gt;
+    elapsed.add(line.split(&apos;,&apos;)[1] as long)
+}
+
+elapsed = elapsed.sort()
+def index = Math.round((props.get(&quot;percentile&quot;) as int) / 100.0 * (elapsed.size()-1)) as int
+
+log.info(props.get(&quot;percentile&quot;)+&quot;th percentile: &quot; + elapsed.get(index - 1))
+
+if (elapsed.get(index - 1) &lt;= (props.get(&quot;percentile_threshold&quot;) as int)) {
+	log.info(&quot;we are passing the threshold&quot;)
+	} else {
+	log.info(&quot;we are failing the threshold&quot;)	
+	}
+
+log.info(&quot;List of results: &quot; + Arrays.toString(elapsed));
+//calculating sum of squares
+def sum = elapsed.sum();
+
+def sumsq = 0 as double;
+for (int i = 0; i &lt;=  elapsed.size()-1; i++) {
+	sumsq = sumsq + elapsed[i]*elapsed[i];
+}
+
+// calculating average
+def avg = sum / elapsed.size();
+
+//calculating conf int in a pervertic way since there is no sqrt() in jmeter
+def variance = (sumsq-sum*avg)/((elapsed.size()-1)*elapsed.size()) as double;
+
+double t;
+double stdev=variance/2;
+while( true ) {
+    t=stdev;
+    stdev=(t+(variance/t))/2;
+    if( t-stdev == 0 ) break
+}
+
+def ci95 = 1.960 * stdev as double;
+
+ci95_left = Math.round((avg-ci95)*100)/100;
+ci95_right = Math.round((avg+ci95)*100)/100;
+string_conf = &quot;[&quot; +ci95_left+&quot;;&quot;+ci95_right+&quot;]&quot;
+log.info(&quot;CI95 = &quot; +string_conf);
+vars.put(&quot;conf_int95&quot;, string_conf);
+
+
+//elapsed.each { value -&gt;
+//    log.info(&quot;Elapsed Value: $value&quot;)
+//}</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+      </hashTree>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>

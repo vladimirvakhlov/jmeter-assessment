@@ -1,0 +1,377 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.2">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="Test Plan" enabled="true">
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.tearDown_on_shutdown">false</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+        <collectionProp name="Arguments.arguments"/>
+      </elementProp>
+    </TestPlan>
+    <hashTree>
+      <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="proper_response" elementType="Argument">
+            <stringProp name="Argument.name">proper_response</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.value">200, 201, 202, 203, 204, 205, 206, 207, 208, 226</stringProp>
+          </elementProp>
+          <elementProp name="categories" elementType="Argument">
+            <stringProp name="Argument.name">categories</stringProp>
+            <stringProp name="Argument.value">6327,6328,6329,6330,6331,6332,6333,6334,6335,6336</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="current_date_time" elementType="Argument">
+            <stringProp name="Argument.name">current_date_time</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+            <stringProp name="Argument.value">${__time(yyyy-MM-dd-HH-mm-ss.SSS,)}</stringProp>
+          </elementProp>
+          <elementProp name="output_file" elementType="Argument">
+            <stringProp name="Argument.name">output_file</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="quantity" elementType="Argument">
+            <stringProp name="Argument.name">quantity</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+        </collectionProp>
+      </Arguments>
+      <hashTree/>
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="setup threads" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </SetupThreadGroup>
+      <hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Threads init" enabled="true">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="script">String[] categories = (vars.get(&quot;categories&quot;)).split(&quot;,&quot;);
+int qty = Math.round(categories.length/2);
+
+${__setProperty(threads,5, )};
+//props.put(&quot;threads&quot;, qty);</stringProp>
+          <stringProp name="scriptLanguage">beanshell</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 PreProcessor" enabled="false">
+          <stringProp name="scriptLanguage">java</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">
+${__setProperty(threads,10, )}</stringProp>
+        </JSR223PreProcessor>
+        <hashTree/>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread Group" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <intProp name="LoopController.loops">-1</intProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">${__P(threads,)}</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">8</stringProp>
+        <boolProp name="ThreadGroup.delayedStart">false</boolProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">false</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 PreProcessor" enabled="true">
+          <stringProp name="cacheKey">false</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="script">import java.util.Random;
+
+//Selecting the category randomly
+
+String[] categories = (vars.get(&quot;categories&quot;)).split(&quot;,&quot;);
+
+int idx = new Random().nextInt(categories.length);
+String category = (categories[idx]);
+
+vars.put(&quot;CategoryId_generated&quot;, category);</stringProp>
+          <stringProp name="scriptLanguage">java</stringProp>
+        </JSR223PreProcessor>
+        <hashTree/>
+        <OnceOnlyController guiclass="OnceOnlyControllerGui" testclass="OnceOnlyController" testname="Once Only Controller" enabled="false"/>
+        <hashTree>
+          <BeanShellSampler guiclass="BeanShellSamplerGui" testclass="BeanShellSampler" testname="BeanShell Sampler" enabled="false">
+            <stringProp name="BeanShellSampler.query">import org.apache.commons.io.FileUtils;
+import org.apache.jmeter.services.FileServer;
+
+//Preparing output file
+
+String todaysDate = vars.get(&quot;current_date_time&quot;);
+String filename = FileServer.getFileServer().getBaseDir()+&quot;/results_&quot;+todaysDate+&quot;.csv&quot;;
+vars.put(&quot;output_file&quot;, filename);
+
+// Open File
+file = new FileOutputStream(vars.get(&quot;output_file&quot;), true); 
+print = new PrintStream(file); 
+
+// Write data to file 
+print.println(
+	&quot;current_date_time&quot;+&quot;,&quot;+
+	&quot;CategoryId_obtained&quot;+&quot;,&quot;+
+	&quot;name&quot;+&quot;,&quot;+
+	&quot;path&quot;+&quot;,&quot;+
+	&quot;promotion_ids_ALL&quot;+&quot;,&quot;+
+	&quot;prices_ALL&quot;+&quot;,&quot;
+			);
+
+// Close File(s)
+print.close();
+file.close();
+</stringProp>
+            <boolProp name="BeanShellSampler.resetInterpreter">false</boolProp>
+          </BeanShellSampler>
+          <hashTree/>
+        </hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="HTTP Request" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">api.tmsandbox.co.nz</stringProp>
+          <stringProp name="HTTPSampler.protocol">https</stringProp>
+          <stringProp name="HTTPSampler.path">/v1/Categories/${CategoryId_generated}/Details.json?catalogue=false</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <boolProp name="HTTPSampler.BROWSER_COMPATIBLE_MULTIPART">false</boolProp>
+          <boolProp name="HTTPSampler.image_parser">false</boolProp>
+          <boolProp name="HTTPSampler.concurrentDwn">false</boolProp>
+          <stringProp name="HTTPSampler.concurrentPool">6</stringProp>
+          <boolProp name="HTTPSampler.md5">false</boolProp>
+          <intProp name="HTTPSampler.ipSourceType">0</intProp>
+          <stringProp name="HTTPSampler.implementation">HttpClient4</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <RegexExtractor guiclass="RegexExtractorGui" testclass="RegexExtractor" testname="Regular Expression Extractor" enabled="true">
+            <stringProp name="RegexExtractor.useHeaders">code</stringProp>
+            <boolProp name="RegexExtractor.default_empty_value">false</boolProp>
+            <stringProp name="RegexExtractor.refname">code</stringProp>
+            <stringProp name="RegexExtractor.regex">(\d+)</stringProp>
+            <stringProp name="RegexExtractor.template">$1$</stringProp>
+          </RegexExtractor>
+          <hashTree/>
+          <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="JSON Extractor" enabled="true">
+            <stringProp name="JSONPostProcessor.referenceNames">CanRelist_obtained;CategoryId_obtained;name;path;promotion_ids;prices</stringProp>
+            <stringProp name="JSONPostProcessor.jsonPathExprs">$.CanRelist;$.CategoryId;$.Name;$.Path;$.Promotions[*].Id;$.Promotions[*].Price</stringProp>
+            <stringProp name="JSONPostProcessor.match_numbers">1;1;1;1;-1;-1</stringProp>
+            <stringProp name="JSONPostProcessor.defaultValues">NULL;NULL;NULL;NULL;NULL;NULL</stringProp>
+            <boolProp name="JSONPostProcessor.compute_concat">true</boolProp>
+          </JSONPostProcessor>
+          <hashTree/>
+        </hashTree>
+        <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If Controller" enabled="true">
+          <boolProp name="IfController.evaluateAll">false</boolProp>
+          <boolProp name="IfController.useExpression">true</boolProp>
+          <stringProp name="IfController.condition">${__groovy(vars.get(&quot;proper_response&quot;).contains(vars.get(&quot;code&quot;)),)}</stringProp>
+        </IfController>
+        <hashTree>
+          <IfController guiclass="IfControllerPanel" testclass="IfController" testname="If Controller" enabled="true">
+            <boolProp name="IfController.evaluateAll">false</boolProp>
+            <boolProp name="IfController.useExpression">true</boolProp>
+            <stringProp name="IfController.condition">${__groovy((vars.get(&quot;CanRelist_obtained&quot;) == &quot;true&quot;) &amp;&amp; (vars.get(&quot;CategoryId_obtained&quot;) == vars.get(&quot;CategoryId_generated&quot;)),)}</stringProp>
+          </IfController>
+          <hashTree>
+            <BeanShellSampler guiclass="BeanShellSamplerGui" testclass="BeanShellSampler" testname="Process results" enabled="true">
+              <stringProp name="BeanShellSampler.query">import org.apache.commons.io.FileUtils;
+import org.apache.jmeter.services.FileServer;
+
+String todaysDate = vars.get(&quot;current_date_time&quot;);
+
+//date = new Date(prev.getStartTime()).format(&quot;yyyy-MM-dd HH:mm:ss zzz&quot;);
+//vars.put(&quot;start&quot;, new Date(prev.getStartTime()).format(&quot;yyyy-MM-dd HH:mm:ss zzz&quot;));
+
+StartTime = prev.getStartTime();
+ResponseTime = prev.getTime();
+
+// Open File
+//file = new FileOutputStream(vars.get(&quot;output_file&quot;), true); 
+file = new FileOutputStream(FileServer.getFileServer().getBaseDir()+&quot;/results_&quot;+todaysDate+&quot;.csv&quot;, true); 
+print = new PrintStream(file); 
+
+// Write data to file 
+print.println(
+	StartTime+&quot;,&quot;+
+	ResponseTime+&quot;,&quot;+
+	vars.get(&quot;CategoryId_obtained&quot;)+&quot;,&quot;+
+	vars.get(&quot;name&quot;)+&quot;,&quot;+
+	vars.get(&quot;path&quot;)+&quot;,&quot;+
+	vars.get(&quot;promotion_ids_ALL&quot;)+&quot;,&quot;+
+	vars.get(&quot;prices_ALL&quot;)+&quot;,&quot;
+			);
+
+// Close File(s)
+print.close();
+file.close();
+
+String[] categories = (vars.get(&quot;categories&quot;)).split(&quot;,&quot;);
+qty = Math.round(categories.length/2);
+
+log.info(&quot;*************CATEGORIES LENGTH*************** is &quot;+qty2);</stringProp>
+              <boolProp name="BeanShellSampler.resetInterpreter">false</boolProp>
+            </BeanShellSampler>
+            <hashTree/>
+          </hashTree>
+        </hashTree>
+        <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="Debug Sampler" enabled="true">
+          <boolProp name="displayJMeterProperties">true</boolProp>
+          <boolProp name="displayJMeterVariables">true</boolProp>
+          <boolProp name="displaySystemProperties">false</boolProp>
+        </DebugSampler>
+        <hashTree/>
+        <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="true">
+          <boolProp name="ResultCollector.error_logging">false</boolProp>
+          <objProp>
+            <name>saveConfig</name>
+            <value class="SampleSaveConfiguration">
+              <time>true</time>
+              <latency>true</latency>
+              <timestamp>true</timestamp>
+              <success>true</success>
+              <label>true</label>
+              <code>true</code>
+              <message>true</message>
+              <threadName>true</threadName>
+              <dataType>true</dataType>
+              <encoding>false</encoding>
+              <assertions>true</assertions>
+              <subresults>true</subresults>
+              <responseData>false</responseData>
+              <samplerData>false</samplerData>
+              <xml>false</xml>
+              <fieldNames>true</fieldNames>
+              <responseHeaders>false</responseHeaders>
+              <requestHeaders>false</requestHeaders>
+              <responseDataOnError>false</responseDataOnError>
+              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+              <assertionsResultsToSave>0</assertionsResultsToSave>
+              <bytes>true</bytes>
+              <sentBytes>true</sentBytes>
+              <url>true</url>
+              <threadCounts>true</threadCounts>
+              <idleTime>true</idleTime>
+              <connectTime>true</connectTime>
+            </value>
+          </objProp>
+          <stringProp name="filename"></stringProp>
+        </ResultCollector>
+        <hashTree/>
+        <ResultCollector guiclass="RespTimeGraphVisualizer" testclass="ResultCollector" testname="Response Time Graph" enabled="true">
+          <boolProp name="ResultCollector.error_logging">false</boolProp>
+          <objProp>
+            <name>saveConfig</name>
+            <value class="SampleSaveConfiguration">
+              <time>true</time>
+              <latency>true</latency>
+              <timestamp>true</timestamp>
+              <success>true</success>
+              <label>true</label>
+              <code>true</code>
+              <message>true</message>
+              <threadName>true</threadName>
+              <dataType>true</dataType>
+              <encoding>false</encoding>
+              <assertions>true</assertions>
+              <subresults>true</subresults>
+              <responseData>false</responseData>
+              <samplerData>false</samplerData>
+              <xml>false</xml>
+              <fieldNames>true</fieldNames>
+              <responseHeaders>false</responseHeaders>
+              <requestHeaders>false</requestHeaders>
+              <responseDataOnError>false</responseDataOnError>
+              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+              <assertionsResultsToSave>0</assertionsResultsToSave>
+              <bytes>true</bytes>
+              <sentBytes>true</sentBytes>
+              <url>true</url>
+              <threadCounts>true</threadCounts>
+              <idleTime>true</idleTime>
+              <connectTime>true</connectTime>
+            </value>
+          </objProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="RespTimeGraph.interval">1000</stringProp>
+        </ResultCollector>
+        <hashTree/>
+        <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="CSV Data Set Config" enabled="false">
+          <stringProp name="delimiter">,</stringProp>
+          <stringProp name="fileEncoding"></stringProp>
+          <stringProp name="filename">${__time(yyyy-MM-dd-mm-SSS,)}</stringProp>
+          <boolProp name="ignoreFirstLine">false</boolProp>
+          <boolProp name="quotedData">false</boolProp>
+          <boolProp name="recycle">true</boolProp>
+          <stringProp name="shareMode">shareMode.all</stringProp>
+          <boolProp name="stopThread">false</boolProp>
+          <stringProp name="variableNames">CanRelist, CategoryId_obtained</stringProp>
+          <stringProp name="TestPlan.comments">says file doesn&apos;t exist, that&apos;s why i didn&apos;t use it.</stringProp>
+        </CSVDataSet>
+        <hashTree/>
+        <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="JSR223 PostProcessor" enabled="false">
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="script">import org.apache.commons.io.FileUtils;
+import org.apache.jmeter.services.FileServer;
+
+//import java.text.SimpleDateFormat
+
+// Generate timestamp to create uniue file name.
+//String todaysDate = &quot;${__time(yyyy-MM-dd-HH-mm-ss.SSS,)}&quot;;
+
+String todaysDate = vars.get(&quot;export_file&quot;);
+String lineSeparator = System.getProperty(&quot;line.separator&quot;);
+
+log.info(&quot;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!FOLDER IS &quot;+lineSeparator+FileServer.getFileServer().getBaseDir()+&quot;/results_&quot;+todaysDate+&quot;.csv&quot;);
+
+// Create file Object
+f = new File(FileServer.getFileServer().getBaseDir()+&quot;/results_&quot;+todaysDate+&quot;.csv&quot;);
+
+//f = new File(&quot;C:/abc/r.csv&quot;);
+
+records = vars.get(&quot;CanRelist&quot;);
+
+log.info(&quot;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!RECORD: &quot;+records);
+
+// FileUtils.writeStringToFile(f,records + System.getProperty(&quot;line.separator&quot;),true);
+FileUtils.writeStringToFile(f, records+System.getProperty(&quot;line.separator&quot;), &quot;UTF-8&quot;, true);
+
+//FileUtils.write(&quot;c:/abc/abc.txt&quot;, &quot;hello \n&quot;, &quot;UTF-8&quot;);
+
+
+//f = new FileOutputStream(FileServer.getFileServer().getBaseDir()+&quot;/results_&quot;+todaysDate+&quot;.csv&quot;, true); 
+//p = new PrintStream(f); 
+
+// Write data to file 
+//p.println(vars.get(&quot;CanRelist&quot;));
+
+// Close File(s)
+//p.close();
+//f.close();
+</stringProp>
+          <stringProp name="scriptLanguage">java</stringProp>
+        </JSR223PostProcessor>
+        <hashTree/>
+      </hashTree>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>
