@@ -1,3 +1,0 @@
-2023-09-28 15:23:59,468 ERROR o.a.j.p.j.s.J.mongo init: Mongo properties are not set, omitting
-2023-09-28 15:25:29,783 ERROR o.a.j.a.J.Validation: Something has failed. Note that: CanRelist is false and CategoryID obtained = 6331 and CategoryID generated was 6331
-2023-09-28 15:25:29,785 ERROR o.a.j.a.J.Validation: {"CategoryId":6331,"Name":"Automotive & aviation","Path":"\/Books\/Magazines\/Automotive-aviation","CanListAuctions":false,"CanListClassifieds":false,"CanRelist":false,"AreaOfBusiness":1,"CanHaveSecondCategory":true,"CanBeSecondCategory":true}
