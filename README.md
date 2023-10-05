@@ -47,3 +47,7 @@ mongodb.collection=test_collection2
 Note that if one of mongodb.address, mongodb.port, mongodb.dbname or mongodb.collection is absent, the entire attempt to write to mongodb will be skipped.
 
 When running, JMeter will check if specified collection exists in MongoDB, and if not, it will create one.
+
+# Implementation
+- MongoDB writing implemented via mongo_writing JSR223 Sampler, which throws a document to MongoDB of already formed line.
+- There is an additional step in setup thread groups, where properties are checked and if they are good, then a test connection is made to database with creation of missing collection specified in loadprofile.properties. If collection exists, we just confirm it and set the flag the mongo is okay, so that we don't try to write all the time to non-existing mongo with each thread finish.
